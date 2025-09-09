@@ -44,10 +44,10 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
             <th>SIZE</th>
             <th>DESCRIPTION</th>
             <?php foreach ($all_ranges as $label): ?>
-              <th><?php echo esc_html($label); ?></th>
+              <th class="tier-col"><?php echo esc_html($label); ?></th>
             <?php endforeach; ?>
             <th  class="col-qty">QTY</th>
-            <th>Add to Cart</th>
+            <th class="col-cart">Add to Cart</th>
           </tr>
         </thead>
         <tbody>
