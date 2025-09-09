@@ -46,7 +46,7 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
             <?php foreach ($all_ranges as $label): ?>
               <th><?php echo esc_html($label); ?></th>
             <?php endforeach; ?>
-            <th>QTY</th>
+            <th  class="col-qty">QTY</th>
             <th>Add to Cart</th>
           </tr>
         </thead>
@@ -78,8 +78,8 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
           <?php echo isset($map[$label]) ? wp_kses_post($map[$label]) : '—'; ?>
         </td>
       <?php endforeach; ?>
-            <td><input type="number" class="qty-input" value="0" min="0"></td>
-            <td><button type="button" class="btn-add">Add to Cart</button></td>
+            <td class="col-qty"><input type="number" class="qty-input" value="0" min="0"></td>
+            <td><button type="button" class="btn-add" disabled>Add to Cart</button></td>
           </tr>
           <?php endforeach; ?>
         </tbody>
@@ -89,3 +89,34 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
     <?php
     return ob_get_clean();
 });
+
+
+
+// Ajax: 单行 Add to Cart
+// Ajax 处理函数（后端）
+add_action('wp_ajax_bulk_add_to_cart', 'my_bulk_add_to_cart');
+add_action('wp_ajax_nopriv_bulk_add_to_cart', 'my_bulk_add_to_cart');
+function my_bulk_add_to_cart() {
+    check_ajax_referer('bulkorder_nonce', 'nonce');
+
+    $variation_id = absint($_POST['variation_id'] ?? 0);
+    $qty = max(1, intval($_POST['qty'] ?? 0));
+
+    if (!$variation_id || $qty <= 0) {
+        wp_send_json_error(['msg' => 'Invalid product or quantity']);
+    }
+
+    $product = wc_get_product($variation_id);
+    if (!$product || !$product->is_type('variation')) {
+        wp_send_json_error(['msg' => 'Product does not exist or is not a variation']);
+    }
+
+    $parent_id = $product->get_parent_id();
+    $added = WC()->cart->add_to_cart($parent_id, $qty, $variation_id, $product->get_variation_attributes());
+
+    if ($added) {
+        wp_send_json_success(['msg' => 'Added to Cart']);
+    } else {
+        wp_send_json_error(['msg' => 'Added to cart failed']);
+    }
+}

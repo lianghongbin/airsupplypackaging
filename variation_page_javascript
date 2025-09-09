@@ -8,7 +8,15 @@ add_action('wp_footer', function(){ ?>
       // 1) checkbox 自动选中
       $row.find('.check-item').prop('checked', qty > 0);
 
-      // 2) 清空之前的高亮
+    // 2) Add to Cart按钮禁用/启用
+    const $btn = $row.find('.btn-add');
+    if (qty > 0) {
+      $btn.prop('disabled', false);
+    } else {
+      $btn.prop('disabled', true);
+    } 
+    
+      // 3) 清空之前的高亮
       $row.find('td.tier-cell').removeClass('active');
 
       if (qty > 0){
@@ -42,3 +50,45 @@ add_action('wp_footer', function(){ ?>
   });
   </script>
 <?php });
+
+
+// 前端脚本（一次性输出）
+add_action('wp_footer', function(){
+    if (!is_product()) return; ?>
+    <script>
+    jQuery(document).ready(function($){
+      // 定义 Ajax 参数
+      const ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
+      const nonce   = '<?php echo wp_create_nonce("bulkorder_nonce"); ?>';
+
+      // 监听按钮点击
+      $('.bulkorder-table').on('click', '.btn-add', function(){
+        const $row = $(this).closest('tr');
+        const variationId = $row.data('variation');
+        const qty = parseInt($row.find('.qty-input').val() || 0, 10);
+
+        if (!variationId || qty <= 0) {
+          alert('Quantity cannot be zero');
+          return;
+        }
+
+        $.post(ajaxurl, {
+          action: 'bulk_add_to_cart',
+          nonce: nonce,
+          variation_id: variationId,
+          qty: qty
+        }, function(res){
+          if (res.success) {
+           if (res && res.success){
+          jQuery(document.body).trigger('wc_fragment_refresh');
+          jQuery(document.body).trigger('added_to_cart', [ {}, res.data.cart_hash || '', null ]);
+      }
+          } else {
+            alert(res.data.msg || 'Add to cart failed');
+          }
+        }, 'json');
+      });
+    });
+    </script>
+    <?php
+});
