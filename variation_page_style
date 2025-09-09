@@ -1,0 +1,70 @@
+add_action('wp_head', function(){ ?>
+<style>
+  .bulkorder-table {
+      width: 100%;
+      border-collapse: collapse;
+  }
+  .bulkorder-table th,
+  .bulkorder-table td {
+      padding: 8px 10px;
+      text-align: left;
+  }
+  .bulkorder-table thead th {
+      border-bottom: 2px solid #ddd;
+      background: #fafafa;
+  }
+  .bulkorder-table tbody tr {
+      border-bottom: 1px solid #f2f2f2;
+  }
+
+  /* 让最后一列（Cart）右对齐 */
+  .bulkorder-table th:last-child,
+  .bulkorder-table td:last-child {
+      text-align: right;
+  }
+
+  /* 美化按钮 */
+  .bulkorder-table .btn-add {
+      padding: 6px 14px;
+      background: #ff6600;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+  }
+  .bulkorder-table .btn-add:hover {
+      background: #e65c00;
+  }
+
+      /* 缩小 QTY 输入框 */
+      .bulkorder-table .qty-input {
+        width: 50px;
+        padding: 2px 4px;
+        text-align: center;
+        font-size: 13px;
+      }
+      /* 让 Add to Cart 靠右 */
+      .bulkorder-table td:last-child, 
+      .bulkorder-table th:last-child {
+        text-align: right;
+      }
+  
+  /* 每个阶梯价格列宽 */
+  .bulkorder-table th:nth-child(n+5):not(:last-child),
+  .bulkorder-table td:nth-child(n+5):not(:last-child) {
+    min-width: 90px;
+    text-align: center;
+  }
+
+  /* 最后一档价格列和 QTY 之间增加间距 */
+  .bulkorder-table th:nth-last-child(3),
+  .bulkorder-table td:nth-last-child(3) {
+    padding-right: 40px; /* 你可以调大/调小，比如 30px / 50px */
+  }
+                 
+  .bulkorder-table td.tier-cell.active {
+      background-color: #ffe08a; /* 高亮背景，可以换成你要的颜色 */
+      font-weight: bold;
+  }
+    </style>
+<?php });

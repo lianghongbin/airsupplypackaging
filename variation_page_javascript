@@ -1,0 +1,44 @@
+add_action('wp_footer', function(){ ?>
+  <script>
+  jQuery(document).ready(function($){
+    $('.bulkorder-table').on('input', '.qty-input', function(){
+      const $row = $(this).closest('tr');
+      const qty = parseInt($(this).val() || 0, 10);
+
+      // 1) checkbox 自动选中
+      $row.find('.check-item').prop('checked', qty > 0);
+
+      // 2) 清空之前的高亮
+      $row.find('td.tier-cell').removeClass('active');
+
+      if (qty > 0){
+        let matched = false;
+
+        $row.find('td.tier-cell').each(function(){
+          const range = $(this).data('range');
+          if (!range) return;
+
+          if (range.includes('+')) {
+            // 例如 "20+" → qty >= 20
+            const min = parseInt(range.replace('+',''), 10);
+            if (qty >= min) {
+              matched = this;
+            }
+          } else {
+            // 例如 "0–4" 或 "5–9"
+            const [min,max] = range.split('–').map(v=>parseInt(v,10));
+            if (qty >= min && qty <= max) {
+              matched = this;
+            }
+          }
+        });
+
+        // 最后再统一加高亮（避免被覆盖）
+        if (matched) {
+          $(matched).addClass('active');
+        }
+      }
+    });
+  });
+  </script>
+<?php });

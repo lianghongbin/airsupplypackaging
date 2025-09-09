@@ -1,0 +1,91 @@
+// 短码： [b2bking_bulkorder_current1]
+add_shortcode('b2bking_bulkorder_current1', function($atts){
+    if (!class_exists('B2bking_Variation_Data')) {
+        return '<pre>Class B2bking_Variation_Data not found.</pre>';
+    }
+
+    $atts = shortcode_atts([
+        'product_id' => 0,
+    ], $atts, 'b2bking_bulkorder_current1');
+
+    $data = B2bking_Variation_Data::collect([
+        'product_id' => absint($atts['product_id']),
+    ]);
+    if (empty($data['ok'])) {
+        return '<pre>Collect failed: '.esc_html($data['reason'] ?? 'unknown').'</pre>';
+    }
+
+    // ==== 1. 统一收集所有区间（含 0–x）
+    $all_ranges = [];
+    foreach ($data['variations'] as $var) {
+        $tiers = $var['tiers'] ?? [];
+        if (empty($tiers)) continue;
+
+        $q1 = max(1, (int)$tiers[0]['qty']);
+        $label0 = '0–'.($q1-1);
+        $all_ranges[$label0] = true;
+
+        for ($i = 0; $i < count($tiers); $i++) {
+            $start = (int)$tiers[$i]['qty'];
+            $end   = ($i+1 < count($tiers)) ? ((int)$tiers[$i+1]['qty'] - 1) : null;
+            $label = is_null($end) ? ($start.'+') : ($start.'–'.$end);
+            $all_ranges[$label] = true;
+        }
+    }
+    $all_ranges = array_keys($all_ranges);
+
+    ob_start(); ?>
+    <div class="bulkorder-table-wrap">
+      <table class="bulkorder-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" class="check-all"></th>
+            <th>SKU</th>
+            <th>SIZE</th>
+            <th>DESCRIPTION</th>
+            <?php foreach ($all_ranges as $label): ?>
+              <th><?php echo esc_html($label); ?></th>
+            <?php endforeach; ?>
+            <th>QTY</th>
+            <th>Add to Cart</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($data['variations'] as $var): 
+              $tiers = $var['tiers'] ?? [];
+              $map = [];
+
+              if (!empty($tiers)) {
+                  $q1 = max(1, (int)$tiers[0]['qty']);
+                  $label0 = '0–'.($q1-1);
+                  $map[$label0] = wc_price($var['regular_price']);
+
+                  for ($i = 0; $i < count($tiers); $i++) {
+                      $start = (int)$tiers[$i]['qty'];
+                      $end   = ($i+1 < count($tiers)) ? ((int)$tiers[$i+1]['qty'] - 1) : null;
+                      $label = is_null($end) ? ($start.'+') : ($start.'–'.$end);
+                      $map[$label] = $tiers[$i]['price_html'];
+                  }
+              }
+          ?>
+          <tr data-variation="<?php echo esc_attr($var['id']); ?>">
+            <td><input type="checkbox" class="check-item"></td>
+            <td><?php echo esc_html($var['sku']); ?></td>
+            <td><?php echo esc_html($var['size']); ?></td>
+            <td><?php echo esc_html($var['description']); ?></td>
+            <?php foreach ($all_ranges as $label): ?>
+        <td class="tier-cell" data-range="<?php echo esc_attr($label); ?>">
+          <?php echo isset($map[$label]) ? wp_kses_post($map[$label]) : '—'; ?>
+        </td>
+      <?php endforeach; ?>
+            <td><input type="number" class="qty-input" value="0" min="0"></td>
+            <td><button type="button" class="btn-add">Add to Cart</button></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <?php
+    return ob_get_clean();
+});
