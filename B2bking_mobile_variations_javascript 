@@ -1,0 +1,80 @@
+add_action('wp_footer', function(){ ?>
+<script>
+jQuery(document).ready(function($){
+
+  /* ===== 1. 监听 Qty 输入框 ===== */
+  $('.mobile-variations-list').on('input', '.qty-input', function(){
+    const $row = $(this).closest('.variation-row');
+    const qty = parseInt($(this).val() || 0, 10);
+
+    // 清除所有高亮
+    $row.find('.tier-price').removeClass('active');
+
+    // 默认禁用按钮
+    const $btn = $row.find('.btn-add');
+    $btn.prop('disabled', true);
+
+    if (qty > 0){
+      // 数量大于 0 → 启用按钮
+      $btn.prop('disabled', false);
+
+      // 匹配对应区间并高亮
+      $row.find('.tier-price').each(function(){
+        const range = $(this).data('range');
+        if (!range) return;
+
+        if (range.includes('+')){
+          const min = parseInt(range.replace('+',''),10);
+          if (qty >= min) {
+            $(this).addClass('active');
+          }
+        } else {
+          const [min,max] = range.split('-').map(v=>parseInt(v,10));
+          if (qty >= min && qty <= max) {
+            $(this).addClass('active');
+          }
+        }
+      });
+    }
+  });
+
+  /* ===== 2. 点击 Add 按钮 → Ajax 加入购物车 ===== */
+  $('.mobile-variations-list').on('click', '.btn-add', function(){
+    const $row = $(this).closest('.variation-row');
+    const variationId = $row.data('variation'); // ✅ 修复：从行的 data-variation 获取
+    const qty = parseInt($row.find('.qty-input').val() || 0, 10);
+
+    if (qty <= 0){
+      alert('Quantity must be greater than 0');
+      return;
+    }
+
+    // 发送 Ajax
+    $.ajax({
+      url: '<?php echo admin_url("admin-ajax.php"); ?>',
+      type: 'POST',
+      dataType: 'json',
+      data: {
+        action: 'bulk_add_to_cart',
+        variation_id: variationId,
+        qty: qty,
+        nonce: '<?php echo wp_create_nonce("bulkorder_nonce"); ?>'
+      },
+      success: function(resp){
+        if (resp.success){
+          alert('Added to Cart');
+          // ✅ 刷新 WooCommerce 小购物车
+          $(document.body).trigger('wc_fragment_refresh');
+        } else {
+          alert(resp.data.msg || 'Add to Cart failed');
+        }
+      },
+      error: function(){
+        alert('Server error, please try again.');
+      }
+    });
+  });
+
+});
+</script>
+<?php });

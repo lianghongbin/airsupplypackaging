@@ -1,0 +1,82 @@
+
+// 短码: [b2bking_mobile_variations]
+add_shortcode('b2bking_mobile_variations', function($atts){
+    if (!class_exists('B2bking_Variation_Data')) {
+        return '<pre>B2bking_Variation_Data class not found.</pre>';
+    }
+
+    $atts = shortcode_atts([
+        'product_id' => 0,
+    ], $atts, 'b2bking_mobile_variations');
+
+    $data = B2bking_Variation_Data::collect([
+        'product_id' => absint($atts['product_id']),
+    ]);
+
+    if (empty($data['ok'])) {
+        return '<pre>Collect failed: '.esc_html($data['reason'] ?? 'unknown').'</pre>';
+    }
+
+    ob_start(); ?>
+    <div class="mobile-variations-list">
+        <?php foreach ($data['variations'] as $var): ?>
+            <div class="variation-row" data-variation="<?php echo esc_attr($var['id']); ?>">
+                
+                <!-- 左边：缩略图 -->
+                <div class="var-thumb">
+                    <?php 
+                    $thumb = $var['image'] ?? '';
+                    if ($thumb){
+                        echo '<img src="'.esc_url($thumb).'" alt="'.esc_attr($var['sku']).'" />';
+                    } else {
+                        echo '<div class="no-thumb">📦</div>'; 
+                    }
+                    ?>
+                </div>
+
+                <!-- 中间：两行 -->
+                <div class="var-info">
+                    <div class="var-line1">
+                        <span class="var-size"><?php echo esc_html($var['size']); ?></span> – 
+                        <span class="var-desc"><?php echo esc_html($var['description']); ?></span>
+                    </div>
+                    <div class="var-line2">
+						<?php 
+						$tiers = $var['tiers'] ?? [];
+						if (!empty($tiers)) {
+							$parts = [];
+
+							// ——首段：0–(第一档-1)
+							$q1 = max(1, (int)$tiers[0]['qty']);
+							$label0 = '0-'.($q1-1);
+							$parts[] = '<span class="tier-price" data-range="'.$label0.'">'.$label0.': '.wc_price($var['regular_price']).'</span>';
+
+							// ——其它区间
+							for ($i = 0; $i < count($tiers); $i++) {
+								$start = (int)$tiers[$i]['qty'];
+								$end   = ($i+1 < count($tiers)) ? ((int)$tiers[$i+1]['qty'] - 1) : null;
+								$label = is_null($end) ? ($start.'+') : ($start.'-'.$end);
+								$parts[] = '<span class="tier-price" data-range="'.$label.'">'.$label.': '.$tiers[$i]
+['price_html'].'</span>';
+							}
+
+							echo implode(' | ', $parts); // 用竖线分隔
+						} else {
+							echo wp_kses_post($var['price_html'] ?? '');
+						}
+						?>
+					</div>
+                </div>
+
+                <!-- 右侧：Qty + 按钮 -->
+                <div class="var-actions">
+                    <input type="number" class="qty-input" value="0" min="0" />
+                    <button type="button" class="btn-add" data-variation="<?php echo esc_attr($var['id']); ?>" disabled>Add</button>
+                </div>
+
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+});
