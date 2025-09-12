@@ -64,13 +64,18 @@ final class B2bking_Variation_Data {
 
             // 与你前端“Price 列”一致的首段价
             $base = self::get_base_price_set($v);
+            
+            $thumb = self::variation_thumb($v);
 
             $out['variations'][] = [
                 'id'              => $v->get_id(),
+                'thumb'           => $thumb,
                 'sku'             => $v->get_sku(),
                 'attributes'      => $v->get_variation_attributes(),
                 'size'            => self::attr_value($v, 'size'),
-                'description'     => self::attr_value($v, 'case'),
+                'pack'            => self::attr_value($v, 'pack'),
+                'case'            => self::attr_value($v, 'case'),
+                'description'     => self::attr_value($v, 'description'),
                 'price_html'      => $v->get_price_html(),
                 'price'           => self::price_float($v->get_price()),
                 'regular_price'   => self::price_float($v->get_regular_price()),
@@ -151,6 +156,42 @@ final class B2bking_Variation_Data {
             }
         }
         return $tiers;
+    }
+    
+    /** 取变体缩图（URL 与 <img>），含兜底 */
+    protected static function variation_thumb(WC_Product_Variation $v, $size = 'woocommerce_thumbnail') : array {
+        $id = (int) $v->get_image_id();
+
+        if (!$id) {
+            $parent = wc_get_product($v->get_parent_id());
+            if ($parent instanceof WC_Product) {
+                // 1) 父产品主图
+                $id = (int) $parent->get_image_id();
+
+                // 2) 父产品画廊首图
+                if (!$id) {
+                    $gallery = $parent->get_gallery_image_ids();
+                    if (!empty($gallery)) {
+                        $id = (int) $gallery[0];
+                    }
+                }
+            }
+        }
+
+        if ($id) {
+            return [
+                'id'   => $id,
+                'url'  => wp_get_attachment_image_url($id, $size),
+                'html' => wp_get_attachment_image($id, $size),
+            ];
+        }
+
+        // 3) 占位图
+        return [
+            'id'   => 0,
+            'url'  => function_exists('wc_placeholder_img_src') ? wc_placeholder_img_src($size) : '',
+            'html' => function_exists('wc_placeholder_img') ? wc_placeholder_img($size) : '',
+        ];
     }
 
     /** 把阶梯价原始结果规范化为统一数组 */
@@ -251,84 +292,3 @@ final class B2bking_Variation_Data {
 }
 
 endif;
-
-
-/**
- * 短码（测试用）：仅输出每个变体的价格区间
- * 0–(首档-1) 用 base_price_html；后续各档用 tiers 的 price_html
- * 用法：在产品页直接放 [b2bking_bulkorder_current] 即可
- */
-add_shortcode('b2bking_bulkorder_current', function($atts){
-    if (!class_exists('B2bking_Variation_Data')) {
-        return '<pre>Class B2bking_Variation_Data not found.</pre>';
-    }
-
-    $atts = shortcode_atts([
-        'product_id' => 0,
-    ], $atts, 'b2bking_bulkorder_current');
-
-    $data = B2bking_Variation_Data::collect([
-        'product_id' => absint($atts['product_id']),
-    ]);
-    if (empty($data['ok'])) {
-        return '<pre>Collect failed: '.esc_html($data['reason'] ?? 'unknown').'</pre>';
-    }
-
-    ob_start(); ?>
-    <div class="bulk-tiers-dump">
-      <h4 style="margin:4px 0 10px;"><?php echo esc_html($data['parent']['name'] ?? ''); ?> — Variations Tiers (test)</h4>
-      <?php foreach ($data['variations'] as $var):
-            $vid  = (int) ($var['id'] ?? 0);
-            $prod = $vid ? wc_get_product($vid) : null;
-            if (!$prod) continue;
-
-            $sku   = $var['sku'] ?? '';
-            $size  = $var['size'] ?? '';
-            $desc  = $var['description'] ?? '';
-
-            // 首段价（HTML）
-            $base_html = $var['base_price_html'] ?? '';
-
-            // 阶梯（按 qty 升序）
-            $tiers = is_array($var['tiers'] ?? null) ? $var['tiers'] : [];
-            $tiers = array_values(array_filter($tiers, function($t){
-                return isset($t['qty']) && floatval($t['qty']) > 0;
-            }));
-            usort($tiers, function($a,$b){ return floatval($a['qty']) <=> floatval($b['qty']); });
-
-            // 输出
-            ?>
-            <div style="margin:10px 0; padding:10px; border:1px solid #eee;">
-              <div><strong>SKU:</strong> <?php echo esc_html($sku ?: '—'); ?></div>
-              <div><strong>SIZE:</strong> <?php echo wp_kses_post($size ?: '—'); ?></div>
-              <div><strong>CASE/DESC:</strong> <?php echo wp_kses_post($desc ?: '—'); ?></div>
-
-              <div style="margin-top:6px;"><strong>PRICE TIERS:</strong></div>
-              <div style="line-height:1.9;">
-                <?php
-                if (!empty($tiers)) {
-                    // 第一档前的 0~(q1-1)
-                    $q1 = max(1, (int)floor($tiers[0]['qty']));
-                    echo '<div>'.esc_html('0–'.($q1-1)).': '.wp_kses_post($base_html).'</div>';
-
-                    // 后续区间
-                    $count = count($tiers);
-                    for ($i = 0; $i < $count; $i++) {
-                        $start = (int)floor($tiers[$i]['qty']);
-                        $end   = ($i+1 < $count) ? ((int)floor($tiers[$i+1]['qty']) - 1) : null;
-                        $label = is_null($end) ? ($start.'+') : ($start.'–'.$end);
-                        $phtml = $tiers[$i]['price_html'] ?? '';
-                        echo '<div>'.esc_html($label).': '.wp_kses_post($phtml).'</div>';
-                    }
-                } else {
-                    // 没有阶梯：只显示 0+
-                    echo '<div>0+: '.wp_kses_post($base_html).'</div>';
-                }
-                ?>
-              </div>
-            </div>
-      <?php endforeach; ?>
-    </div>
-    <?php
-    return ob_get_clean();
-});

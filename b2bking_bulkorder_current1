@@ -1,12 +1,12 @@
 // 短码： [b2bking_bulkorder_current1]
-add_shortcode('b2bking_bulkorder_current1', function($atts){
+add_shortcode('b2bking_bulkorder_current', function($atts){
     if (!class_exists('B2bking_Variation_Data')) {
         return '<pre>Class B2bking_Variation_Data not found.</pre>';
     }
 
     $atts = shortcode_atts([
         'product_id' => 0,
-    ], $atts, 'b2bking_bulkorder_current1');
+    ], $atts, 'b2bking_bulkorder_current');
 
     $data = B2bking_Variation_Data::collect([
         'product_id' => absint($atts['product_id']),
@@ -33,20 +33,35 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
         }
     }
     $all_ranges = array_keys($all_ranges);
+    
+    if (($data['variations'][0]['pack'] ?? '') !== '') {
+        $column_key   = 'pack';
+        $column_value = $data['variations'][0]['pack'];
+    } elseif (($data['variations'][0]['case'] ?? '') !== '') {
+        $column_key   = 'case';
+        $column_value = $data['variations'][0]['case'];
+    } else {
+        $column_key   = '';
+        $column_value = '';
+    }
 
     ob_start(); ?>
     <div class="bulkorder-table-wrap">
       <table class="bulkorder-table">
         <thead>
           <tr>
-            <th><input type="checkbox" class="check-all"></th>
-            <th>SKU</th>
-            <th>SIZE</th>
-            <th>DESCRIPTION</th>
+            <th class="bulk_current_checkbox"><input type="checkbox" class="check-all"></th>
+            <th class="bulk_current_thumb">IMAGE</th>
+            <th class="bulk_current_sku">SKU</th>
+            <th class="bulk_current_size">SIZE<?php echo $column_value;?></th>
+            <?php if($column_value!=''){
+                echo '<th class="bulk_current_key">'.$column_key.'</th>';
+            } ?>
+            <th class="bulk_current_description">DESCRIPTION</th>
             <?php foreach ($all_ranges as $label): ?>
               <th class="tier-col"><?php echo esc_html($label); ?></th>
             <?php endforeach; ?>
-            <th  class="col-qty">QTY</th>
+            <th class="col-qty">QTY</th>
             <th class="col-cart">Add to Cart</th>
           </tr>
         </thead>
@@ -69,17 +84,19 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
               }
           ?>
           <tr data-variation="<?php echo esc_attr($var['id']); ?>">
-            <td><input type="checkbox" class="check-item"></td>
-            <td><?php echo esc_html($var['sku']); ?></td>
-            <td><?php echo esc_html($var['size']); ?></td>
-            <td><?php echo esc_html($var['description']); ?></td>
+            <td class="bulk_current_checkbox"><input type="checkbox" class="check-item"></td>
+            <td class="bulk_current_thumb"><img class="variation-thumb" src="<?php echo esc_url($var['thumb']['url']) ?>"/></td>
+            <td class="bulk_current_sku"><?php echo esc_html($var['sku']); ?></td>
+            <td class="bulk_current_size"><?php echo esc_html($var['size']); ?></td>
+            <td class="bulk_current_key"><?php echo esc_html($column_value);?></td>
+            <td class="bulk_current_description"><?php echo esc_html($var['description']); ?></td>
             <?php foreach ($all_ranges as $label): ?>
-        <td class="tier-cell" data-range="<?php echo esc_attr($label); ?>">
-          <?php echo isset($map[$label]) ? wp_kses_post($map[$label]) : '—'; ?>
-        </td>
-      <?php endforeach; ?>
+                <td class="tier-cell" data-range="<?php echo esc_attr($label); ?>">
+                  <?php echo isset($map[$label]) ? wp_kses_post($map[$label]) : '—'; ?>
+                </td>
+            <?php endforeach; ?>
             <td class="col-qty"><input type="number" class="qty-input" value="0" min="0"></td>
-            <td><button type="button" class="btn-add" disabled>Add to Cart</button></td>
+            <td class="col-cart"><button type="button" class="btn-add" disabled>Add to Cart</button></td>
           </tr>
           <?php endforeach; ?>
         </tbody>
@@ -89,34 +106,3 @@ add_shortcode('b2bking_bulkorder_current1', function($atts){
     <?php
     return ob_get_clean();
 });
-
-
-
-// Ajax: 单行 Add to Cart
-// Ajax 处理函数（后端）
-add_action('wp_ajax_bulk_add_to_cart', 'my_bulk_add_to_cart');
-add_action('wp_ajax_nopriv_bulk_add_to_cart', 'my_bulk_add_to_cart');
-function my_bulk_add_to_cart() {
-    check_ajax_referer('bulkorder_nonce', 'nonce');
-
-    $variation_id = absint($_POST['variation_id'] ?? 0);
-    $qty = max(1, intval($_POST['qty'] ?? 0));
-
-    if (!$variation_id || $qty <= 0) {
-        wp_send_json_error(['msg' => 'Invalid product or quantity']);
-    }
-
-    $product = wc_get_product($variation_id);
-    if (!$product || !$product->is_type('variation')) {
-        wp_send_json_error(['msg' => 'Product does not exist or is not a variation']);
-    }
-
-    $parent_id = $product->get_parent_id();
-    $added = WC()->cart->add_to_cart($parent_id, $qty, $variation_id, $product->get_variation_attributes());
-
-    if ($added) {
-        wp_send_json_success(['msg' => 'Added to Cart']);
-    } else {
-        wp_send_json_error(['msg' => 'Added to cart failed']);
-    }
-}

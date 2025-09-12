@@ -1,121 +1,143 @@
-
-/**
- * 这是一个完整的 WordPress 文件，包含一个样式化的 HTML 表格。
- * 通过 wp_head 动作钩子将所有 CSS 样式注入页面。
- */
-
-// ----------------------------------------------------------------------
-// 1. 通过 wp_head 动作钩子添加 CSS 样式
-// ----------------------------------------------------------------------
 add_action('wp_head', function(){ ?>
 <style>
-    .bulkorder-table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed; /* 固定布局，防止列抖动 */
-    }
+.bulkorder-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* 固定布局，防止列抖动 */
+}
 
-    /* ===== 表格通用样式 ===== */
-    .bulkorder-table thead th {
-        padding: 10px 12px;
-        font-size: 14px;
-        border-bottom: 2px solid #ddd;
-        background: #fafafa;
-        text-align: left;
-        white-space: nowrap;
-    }
-    .bulkorder-table tbody td {
-        padding: 6px 8px;
-        font-size: 13px;
-        text-align: left;
-        border-bottom: 1px solid #f2f2f2;
-    }
+/* ===== 所有单元格默认左对齐 ===== */
+.bulkorder-table th,
+.bulkorder-table td {
+    text-align: left;
+}
 
-    /* ===== 第一列的 Checkbox 靠近左侧 ===== */
-    .bulkorder-table th:first-child,
-    .bulkorder-table td:first-child {
-        width: 30px;
-        text-align: center;
-    }
+/* ===== 表头与表体的通用样式 ===== */
+.bulkorder-table thead th {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-bottom: 2px solid #ddd;
+    background: #fafafa;
+    white-space: nowrap;
+}
+.bulkorder-table tbody td {
+    padding: 6px 18px;
+    font-size: 13px;
+    border-bottom: 1px solid #f2f2f2;
+}
 
-    /* ===== SKU / SIZE 列的对齐和间距 ===== */
-    .bulkorder-table th:nth-child(2),
-    .bulkorder-table td:nth-child(2),
-    .bulkorder-table th:nth-child(3),
-    .bulkorder-table td:nth-child(3) {
-        text-align: left;
-        padding-left: 4px; /* 缩小左边距，靠近 checkbox */
-        white-space: nowrap;
-    }
+/* ===== 第一列：checkbox ===== */
+.bulkorder-table .bulk_current_checkbox {
+    width: 15px;
+    padding-left: 0px !important; /* 强制统一左边距 */
+}
 
-    /* ===== description 列单独设置，使其更宽 ===== */
-    .bulkorder-table th:nth-child(4),
-    .bulkorder-table td:nth-child(4) {
-        width: 200px; /* 设置一个比默认值更宽的固定宽度 */
-        text-align: left;
-        padding-left: 4px;
-        white-space: normal; /* 允许内容换行 */
-    }
-    
-    /* ===== 阶梯价格列 ===== */
-    .bulkorder-table th.tier-col,
-    .bulkorder-table td.tier-cell {
-        min-width: 80px;
-        text-align: center;
-    }
+/* ① 缩略图所在单元格：左右 padding 对称，保证居中基准不偏 */
+.bulkorder-table .bulk_current_thumb {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center;      /* 表头“IMAGE”也会居中 */
+  vertical-align: middle;
+  width: 100px;
+}
 
-    /* ===== QTY 列 ===== */
-    .bulkorder-table th.col-qty,
-    .bulkorder-table td.col-qty {
-        width: 60px;
-        text-align: center;
-    }
-    .bulkorder-table .qty-input {
-        width: 45px;
-        height: 22px;
-        padding: 2px 4px;
-        text-align: center;
-        font-size: 12px;
-    }
+/* ===== 第三列：SKU ===== */
+.bulkorder-table .bulk_current_sku {
+    width: 100px;
+    white-space: nowrap;
+}
 
-    /* ===== Add to Cart 列固定宽度 ===== */
-    .bulkorder-table th:last-child,
-    .bulkorder-table td:last-child {
-        width: 120px;
-        text-align: right;
-        white-space: nowrap;
-    }
+/* ===== 第四列：SIZE ===== */
+.bulkorder-table .bulk_current_size {
+    width: 100px;
+    white-space: nowrap;
+}
+                                 
+/* ===== 第五列：PACK/CASE ===== */
+.bulkorder-table .bulk_current_key {
+    width: 100px;
+    white-space: nowrap;
+}
 
-    /* ===== Add to Cart 按钮 ===== */
-    .bulkorder-table .btn-add {
-        all: unset;
-        display: inline-block;
-        height: 24px !important;
-        line-height: 24px !important;
-        padding: 0 10px !important;
-        font-size: 12px !important;
-        background: #37296f !important;
-        color: #fff !important;
-        border-radius: 3px !important;
-        border: 1px solid #37296f !important;
-        cursor: pointer !important;
-        text-align: center !important;
-    }
-    .bulkorder-table .btn-add:hover {
-        background: #e65c00 !important;
-        border-color: #e65c00 !important;
-    }
-    .bulkorder-table .btn-add:disabled {
-        background: #ccc;
-        color: #666;
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
+/* ===== 第六列：description（自适应撑开） ===== */
+.bulkorder-table .bulk_current_description {
+    min-width: 280px;
+    width: auto; /* 自动扩展填充剩余空间 */
+    padding-left: 10px;
+    white-space: normal; /* 允许换行 */
+}
 
-    /* ===== 高亮阶梯价格 ===== */
-    .bulkorder-table td.tier-cell.active {
-        background-color: #ffe08a;
-        font-weight: bold;
-    }
+/* ===== 阶梯价格列（固定宽度，靠右） ===== */
+.bulkorder-table th.tier-col,
+.bulkorder-table td.tier-cell {
+    width: 90px;
+}
+
+/* ===== QTY 列 ===== */
+.bulkorder-table th.col-qty,
+.bulkorder-table td.col-qty {
+    width: 100px;
+}
+.bulkorder-table .qty-input {
+    width: 130px;
+    height: 22px;
+    padding: 2px 5px;
+    font-size: 12px;
+    text-align: left;
+}
+
+/* ===== Add to Cart 列 ===== */
+.bulkorder-table th:last-child,
+.bulkorder-table td:last-child {
+    width: 130px;
+    text-align: center !important; /* 强制居中对齐 */
+    vertical-align: middle !important; /* 垂直居中，确保表头和内容对齐 */
+    white-space: nowrap;
+}
+
+/* ===== Add to Cart 按钮 ===== */
+.bulkorder-table .btn-add {
+    all: unset;
+    display: block;        /* 块元素 */
+    margin: 0 auto;        /* 自动左右外边距，水平居中 */
+    height: 24px !important;
+    line-height: 24px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    background: #37296f !important;
+    color: #fff !important;
+    border-radius: 3px !important;
+    border: 1px solid #37296f !important;
+    cursor: pointer !important;
+    text-align: center;
+    width: fit-content; /* 自适应内容宽度，确保居中 */
+    vertical-align: middle; /* 垂直居中 */
+}
+                                 
+.bulkorder-table .btn-add:hover {
+    background: #e65c00 !important;
+    border-color: #e65c00 !important;
+}
+.bulkorder-table .btn-add:disabled {
+    background: #ccc;
+    color: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ===== 高亮阶梯价格 ===== */
+.bulkorder-table td.tier-cell.active {
+    background-color: #ffe08a;
+    font-weight: bold;
+}
+
+/* ===== 图片缩略图 ===== */
+.variation-thumb {
+    max-width: 40px;
+    max-height: 40px;
+    margin: 0 auto;      /* 自动分配左右外边距，实现水平居中 */
+    object-fit: contain;
+    display: block;
+}
 </style>
 <?php });
