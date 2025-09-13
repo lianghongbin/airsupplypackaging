@@ -1,9 +1,15 @@
 add_action('wp_head', function(){ ?>
 <style>
-.bulkorder-table {
-    width: 100%;
+body .bulkorder-table { /* 提高特异性 */
+    width: 100% !important;
+    min-width: 0 !important; /* 移除可能导致偏移的 min-width */
+    max-width: 100% !important; /* 确保不超过容器 */
     border-collapse: collapse;
-    table-layout: fixed; /* 固定布局，防止列抖动 */
+    table-layout: fixed; /* 恢复固定布局 */
+    box-sizing: border-box;
+    margin: 0 auto !important; /* 强制居中 */
+    padding: 0 !important;
+    overflow-x: hidden; /* 防止水平滚动 */
 }
 
 /* ===== 所有单元格默认左对齐 ===== */
@@ -29,16 +35,16 @@ add_action('wp_head', function(){ ?>
 /* ===== 第一列：checkbox ===== */
 .bulkorder-table .bulk_current_checkbox {
     width: 15px;
-    padding-left: 0px !important; /* 强制统一左边距 */
+    padding-left: 0px !important;
 }
 
 /* ① 缩略图所在单元格：左右 padding 对称，保证居中基准不偏 */
 .bulkorder-table .bulk_current_thumb {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  text-align: center;      /* 表头“IMAGE”也会居中 */
-  vertical-align: middle;
-  width: 100px;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: center;
+    vertical-align: middle;
+    width: 100px;
 }
 
 /* ===== 第三列：SKU ===== */
@@ -62,9 +68,11 @@ add_action('wp_head', function(){ ?>
 /* ===== 第六列：description（自适应撑开） ===== */
 .bulkorder-table .bulk_current_description {
     min-width: 280px;
-    width: auto; /* 自动扩展填充剩余空间 */
+    width: auto; /* 自动扩展 */
     padding-left: 10px;
-    white-space: normal; /* 允许换行 */
+    white-space: normal;
+    box-sizing: border-box;
+    /* flex-grow: 1; /* 移除，可能因 table-layout 无效 */
 }
 
 /* ===== 阶梯价格列（固定宽度，靠右） ===== */
@@ -90,16 +98,16 @@ add_action('wp_head', function(){ ?>
 .bulkorder-table th:last-child,
 .bulkorder-table td:last-child {
     width: 130px;
-    text-align: center !important; /* 强制居中对齐 */
-    vertical-align: middle !important; /* 垂直居中，确保表头和内容对齐 */
+    text-align: center !important;
+    vertical-align: middle !important;
     white-space: nowrap;
 }
 
 /* ===== Add to Cart 按钮 ===== */
 .bulkorder-table .btn-add {
     all: unset;
-    display: block;        /* 块元素 */
-    margin: 0 auto;        /* 自动左右外边距，水平居中 */
+    display: block;
+    margin: 0 auto;
     height: 24px !important;
     line-height: 24px !important;
     padding: 0 10px !important;
@@ -110,8 +118,9 @@ add_action('wp_head', function(){ ?>
     border: 1px solid #37296f !important;
     cursor: pointer !important;
     text-align: center;
-    width: fit-content; /* 自适应内容宽度，确保居中 */
-    vertical-align: middle; /* 垂直居中 */
+    width: fit-content;
+    vertical-align: middle;
+    box-sizing: border-box;
 }
                                  
 .bulkorder-table .btn-add:hover {
@@ -135,7 +144,7 @@ add_action('wp_head', function(){ ?>
 .variation-thumb {
     max-width: 40px;
     max-height: 40px;
-    margin: 0 auto;      /* 自动分配左右外边距，实现水平居中 */
+    margin: 0 auto;
     object-fit: contain;
     display: block;
 }
