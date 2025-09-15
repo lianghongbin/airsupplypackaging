@@ -1,3 +1,5 @@
+
+// JavaScript（处理数量输入）
 add_action('wp_footer', function(){ ?>
   <script>
   jQuery(document).ready(function($){
@@ -5,26 +7,33 @@ add_action('wp_footer', function(){ ?>
       const $row = $(this).closest('tr');
       const qty = parseInt($(this).val() || 0, 10);
 
+      // 调试：检查数量和按钮状态
+      console.log('Quantity:', qty, 'Button disabled:', $row.find('.btn-add').prop('disabled'));
+
       // 1) checkbox 自动选中
       $row.find('.check-item').prop('checked', qty > 0);
 
-    // 2) Add to Cart按钮禁用/启用
-    const $btn = $row.find('.btn-add');
-    if (qty > 0) {
-      $btn.prop('disabled', false);
-    } else {
-      $btn.prop('disabled', true);
-    } 
-    
-      // 3) 清空之前的高亮
-      $row.find('td.tier-cell').removeClass('active');
+      // 2) Add to Cart按钮禁用/启用
+      const $btn = $row.find('.btn-add');
+      if (qty > 0) {
+        $btn.prop('disabled', false);
+      } else {
+        $btn.prop('disabled', true);
+      }  
 
-      if (qty > 0){
+      // 3) 检查是否有“Price”列
+      const hasPriceColumn = $row.closest('table').find('th.tier-col').filter(function(){
+        return $(this).text().trim() === 'Price';
+      }).length > 0;
+
+      // 4) 如果没有“Price”列（即有价格区间），才执行高亮逻辑
+      if (!hasPriceColumn && qty > 0) {
+        $row.find('td.tier-cell').removeClass('active');
         let matched = false;
 
         $row.find('td.tier-cell').each(function(){
           const range = $(this).data('range');
-          if (!range) return;
+          if (!range) return; // 跳过无 data-range 的单元格
 
           if (range.includes('+')) {
             // 例如 "20+" → qty >= 20
@@ -34,25 +43,27 @@ add_action('wp_footer', function(){ ?>
             }
           } else {
             // 例如 "0–4" 或 "5–9"
-            const [min,max] = range.split('–').map(v=>parseInt(v,10));
+            const [min, max] = range.split('–').map(v => parseInt(v, 10));
             if (qty >= min && qty <= max) {
               matched = this;
             }
           }
         });
 
-        // 最后再统一加高亮（避免被覆盖）
+        // 最后再统一加高亮
         if (matched) {
           $(matched).addClass('active');
         }
+      } else {
+        // 如果有“Price”列，清空所有高亮
+        $row.find('td.tier-cell').removeClass('active');
       }
     });
   });
   </script>
 <?php });
 
-
-// 前端脚本（一次性输出）
+// JavaScript（处理添加购物车）
 add_action('wp_footer', function(){
     if (!is_product()) return; ?>
     <script>
@@ -67,8 +78,10 @@ add_action('wp_footer', function(){
         const variationId = $row.data('variation');
         const qty = parseInt($row.find('.qty-input').val() || 0, 10);
 
+        console.log('Add to Cart clicked:', { variationId, qty }); // 调试
+
         if (!variationId || qty <= 0) {
-          alert('Quantity cannot be zero');
+          alert('Quantity cannot be zero or invalid variation ID');
           return;
         }
 
@@ -78,17 +91,48 @@ add_action('wp_footer', function(){
           variation_id: variationId,
           qty: qty
         }, function(res){
+          console.log('Ajax response:', res); // 调试
           if (res.success) {
-           if (res && res.success){
-          jQuery(document.body).trigger('wc_fragment_refresh');
-          jQuery(document.body).trigger('added_to_cart', [ {}, res.data.cart_hash || '', null ]);
-      }
+            jQuery(document.body).trigger('wc_fragment_refresh');
+            jQuery(document.body).trigger('added_to_cart', [ {}, res.data.cart_hash || '', null ]);
           } else {
             alert(res.data.msg || 'Add to cart failed');
           }
-        }, 'json');
+        }, 'json').fail(function(jqXHR, textStatus, errorThrown) {
+          console.error('Ajax error:', textStatus, errorThrown); // 调试错误
+        });
       });
     });
     </script>
     <?php
 });
+
+// 后端 Ajax 处理函数
+add_action('wp_ajax_bulk_add_to_cart', 'handle_bulk_add_to_cart');
+add_action('wp_ajax_nopriv_bulk_add_to_cart', 'handle_bulk_add_to_cart'); // 支持未登录用户
+function handle_bulk_add_to_cart() {
+    check_ajax_referer('bulkorder_nonce', 'nonce'); // 验证 nonce
+
+    $variation_id = isset($_POST['variation_id']) ? absint($_POST['variation_id']) : 0;
+    $qty = isset($_POST['qty']) ? absint($_POST['qty']) : 0;
+
+    if (!$variation_id || !$qty) {
+        wp_send_json_error(['msg' => 'Invalid variation ID or quantity']);
+    }
+
+    // 确保是有效的变体 ID
+    $product = wc_get_product($variation_id);
+    if (!$product || !$product->is_type('variation')) {
+        wp_send_json_error(['msg' => 'Invalid product variation']);
+    }
+
+    // 获取父产品 ID（对于变体产品）
+    $parent_id = $product->get_parent_id();
+    $cart_item_key = WC()->cart->add_to_cart($parent_id, $qty, $variation_id);
+    if ($cart_item_key) {
+        wp_send_json_success(['cart_hash' => WC()->cart->get_cart_hash()]);
+    } else {
+        wp_send_json_error(['msg' => 'Failed to add to cart']);
+    }
+}
+?>
