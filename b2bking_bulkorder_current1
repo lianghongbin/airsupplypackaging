@@ -33,17 +33,17 @@ add_shortcode('b2bking_bulkorder_current', function($atts){
         }
     }
     $all_ranges = array_keys($all_ranges);
-    
-    if (($data['variations'][0]['pack'] ?? '') !== '') {
-        $column_key   = 'pack';
-        $column_value = $data['variations'][0]['pack'];
-    } elseif (($data['variations'][0]['case'] ?? '') !== '') {
-        $column_key   = 'case';
-        $column_value = $data['variations'][0]['case'];
-    } else {
-        $column_key   = '';
-        $column_value = '';
-    }
+	
+	if (($data['variations'][0]['pack'] ?? '') !== '') {
+    	$column_key   = 'pack';
+    	$column_value = $data['variations'][0]['pack'];
+	} elseif (($data['variations'][0]['case'] ?? '') !== '') {
+    	$column_key   = 'case';
+    	$column_value = $data['variations'][0]['case'];
+	} else {
+    	$column_key   = '';
+    	$column_value = '';
+	}
 
     ob_start(); ?>
     <div class="bulkorder-table-wrap">
@@ -51,16 +51,20 @@ add_shortcode('b2bking_bulkorder_current', function($atts){
         <thead>
           <tr>
             <th class="bulk_current_checkbox"><input type="checkbox" class="check-all"></th>
-            <th class="bulk_current_thumb">IMAGE</th>
+			<th class="bulk_current_thumb">IMAGE</th>
             <th class="bulk_current_sku">SKU</th>
             <th class="bulk_current_size">SIZE<?php echo $column_value;?></th>
-            <?php if($column_value!=''){
-                echo '<th class="bulk_current_key">'.$column_key.'</th>';
-            } ?>
+			<?php if(!empty($column_value)){
+				echo '<th class="bulk_current_key">'.$column_key.'</th>';
+			} ?>
             <th class="bulk_current_description">DESCRIPTION</th>
             <?php foreach ($all_ranges as $label): ?>
               <th class="tier-col"><?php echo esc_html($label); ?></th>
             <?php endforeach; ?>
+				
+			<?php if(empty($all_ranges)) { ?>
+			  <th class="tier-col">Price</th>								 
+			<?php } ?>
             <th class="col-qty">QTY</th>
             <th class="col-cart">Add to Cart</th>
           </tr>
@@ -69,7 +73,7 @@ add_shortcode('b2bking_bulkorder_current', function($atts){
           <?php foreach ($data['variations'] as $var): 
               $tiers = $var['tiers'] ?? [];
               $map = [];
-
+			  $regular_price = '';
               if (!empty($tiers)) {
                   $q1 = max(1, (int)$tiers[0]['qty']);
                   $label0 = '0–'.($q1-1);
@@ -82,19 +86,27 @@ add_shortcode('b2bking_bulkorder_current', function($atts){
                       $map[$label] = $tiers[$i]['price_html'];
                   }
               }
+			  else {
+				  $regular_price = wc_price($var['regular_price']);
+			  }
           ?>
           <tr data-variation="<?php echo esc_attr($var['id']); ?>">
             <td class="bulk_current_checkbox"><input type="checkbox" class="check-item"></td>
-            <td class="bulk_current_thumb"><img class="variation-thumb" src="<?php echo esc_url($var['thumb']['url']) ?>"/></td>
+			<td class="bulk_current_thumb"><img class="variation-thumb" src="<?php echo esc_url($var['thumb']['url']) ?>"/></td>
             <td class="bulk_current_sku"><?php echo esc_html($var['sku']); ?></td>
             <td class="bulk_current_size"><?php echo esc_html($var['size']); ?></td>
-            <td class="bulk_current_key"><?php echo esc_html($column_value);?></td>
+			<?php if (!empty($column_value)) { ?>
+				<td class="bulk_current_key"><?php echo esc_html($column_value);?></td>
+			<?php } ?>
             <td class="bulk_current_description"><?php echo esc_html($var['description']); ?></td>
             <?php foreach ($all_ranges as $label): ?>
                 <td class="tier-cell" data-range="<?php echo esc_attr($label); ?>">
                   <?php echo isset($map[$label]) ? wp_kses_post($map[$label]) : '—'; ?>
                 </td>
             <?php endforeach; ?>
+			<?php if(!empty($regular_price)) { ?>
+				<td class="tier-cell"><?php echo $regular_price; ?></td>
+			<?php } ?>
             <td class="col-qty"><input type="number" class="qty-input" value="0" min="0"></td>
             <td class="col-cart"><button type="button" class="btn-add" disabled>Add to Cart</button></td>
           </tr>
