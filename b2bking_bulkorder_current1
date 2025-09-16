@@ -105,7 +105,7 @@ add_shortcode('b2bking_bulkorder_current', function($atts){
                 </td>
             <?php endforeach; ?>
 			<?php if(!empty($regular_price)) { ?>
-				<td class="tier-cell"><?php echo $regular_price; ?></td>
+				<td class="tier-cell"><?php echo $var['price_html']; ?></td>
 			<?php } ?>
             <td class="col-qty"><input type="number" class="qty-input" value="0" min="0"></td>
             <td class="col-cart"><button type="button" class="btn-add" disabled>Add to Cart</button></td>
