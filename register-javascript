@@ -1,0 +1,40 @@
+add_action('wp_footer', function(){ ?>
+<script>
+jQuery(document).ready(function($) {
+    var $stateSelect    = $('#billing_state');
+    var $caContainer    = $('label[for="b2bking_field_31048"]').closest('p');
+    var $caInput        = $('#b2bking_field_31048');
+    var $otherContainer = $('label[for="b2bking_field_31053"]').closest('p');
+    var $otherInput     = $('#b2bking_field_31053');
+
+    // 页面加载时：全部隐藏并移除 required
+    $caContainer.hide();
+    $caInput.removeAttr('required');
+    $otherContainer.hide();
+
+    // 监听州选择
+    $stateSelect.on('change', function() {
+        if ($(this).val() === 'CA') {
+            // 加州：显示 CA 容器 + 必填
+            $caContainer.show();
+            $caInput.attr('required', true);
+
+            // 隐藏其他州
+            $otherContainer.hide();
+        } else if ($(this).val()) {
+            // 其他州：显示其他州容器（可选）
+            $otherContainer.show();
+
+            // 隐藏 CA 容器
+            $caContainer.hide();
+            $caInput.removeAttr('required');
+        } else {
+            // 没选州：全部隐藏
+            $caContainer.hide();
+            $caInput.removeAttr('required');
+            $otherContainer.hide();
+        }
+    });
+});
+</script>
+<?php });
