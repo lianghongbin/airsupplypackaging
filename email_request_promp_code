@@ -1,0 +1,9 @@
+
+add_filter( 'wp_mail', function( $args ) {
+    // 只处理 Elementor 表单邮件（避免影响 WooCommerce 订单等）
+    if ( isset($args['subject']) && strpos($args['subject'], 'Offer') !== false ) {
+        $coupon_code = 'TPQZS7AC'; // 固定的优惠码，可以换成 WooCommerce 动态获取
+        $args['message'] = str_replace('[coupon_code]', $coupon_code, $args['message']);
+    }
+    return $args;
+});
